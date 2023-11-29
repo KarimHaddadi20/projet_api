@@ -21,10 +21,10 @@ app.use(
 
 
 
-const port = 3005;
+const port = 3000;
 
 
 // server.listen instead of app.listen
-server.listen(port, () => {
+app.listen(port, () => {
   console.log(`App listening on port ${port}`);
 });
