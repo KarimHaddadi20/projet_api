@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import RegisterValidator from "../../validators/RegisterValidator.js";
 import LoginValidator from "../../validators/LoginValidator.js";
+import multer from "multer";
 
 // Initialisation de PrismaClient pour interagir avec la base de données
 const prisma = new PrismaClient();
@@ -14,8 +15,13 @@ const prisma = new PrismaClient();
 const router = express.Router();
 
 
-// Route POST pour l'enregistrement des utilisateurs
-router.post("/register", async (req, res, next) => {
+//multer permet gérer le téléchargement de la photo de l'utilisateur lors de l'enregistrement.
+
+const upload = multer({ dest: 'uploads/' }); // configuration multer
+
+router.post("/register", upload.single('photo'), async (req, res, next) => {
+
+  // Route POST pour l'enregistrement des utilisateurs
   let data;
   try {
     // Validation des données de la requête
@@ -53,7 +59,7 @@ router.post("/register", async (req, res, next) => {
       email,
       firstname,
       lastname,
-      picture,
+      picture: req.file.path,
       password: hashedPassword,
     },
   });
@@ -90,7 +96,6 @@ router.post("/login", async (req, res, next) => {
   });
 
 
-
   // Si l'utilisateur n'existe pas (c'est-à-dire si 'user' est null ou undefined),
   // une erreur est créée avec le statut 403 et le message "Wrong email or password",
   // puis passée à la fonction 'next' pour être traitée par le gestionnaire d'erreurs.
@@ -102,7 +107,6 @@ router.post("/login", async (req, res, next) => {
   // trouvé dans la base de données. 'bcrypt.compareSync' renvoie 'true' si les mots de passe correspondent, 
   // et 'false' sinon.  
   const isGoodPassword = bcrypt.compareSync(password, user.password);
-
 
 
   // Si le mot de passe ne correspond pas (c'est-à-dire si 'isGoodPassword' est 'false'),
@@ -132,6 +136,35 @@ router.post("/login", async (req, res, next) => {
 });
 
 
+
+// Définition de la route GET "/snippets"
+router.get("/snippets", async (req, res, next) => {
+  // Extraction de 'category' et 'page' des paramètres de requête
+  const { category, page = 1 } = req.query;
+
+  // Définition du nombre de snippets par page
+  const pageSize = 10;
+
+  // Calcul du nombre de snippets à ignorer
+  const skip = (page - 1) * pageSize;
+
+  // Récupération des snippets de la base de données
+  const snippets = await prisma.snippet.findMany({
+    where: {
+      category: {
+        name: category
+      },
+    },
+    skip: skip,
+    take: pageSize,
+    include: {
+      category: true,
+    },
+  });
+
+  // Renvoi des snippets récupérés dans la réponse
+  res.json(snippets);
+});
 
 // Le routeur est exporté pour être utilisé dans d'autres fichiers.
 export default router;
