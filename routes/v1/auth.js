@@ -1,3 +1,5 @@
+//auth.js
+
 // Importation des modules nécessaires
 import express from "express";
 import jwt from "jsonwebtoken";
@@ -6,20 +8,26 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import RegisterValidator from "../../validators/RegisterValidator.js";
 import LoginValidator from "../../validators/LoginValidator.js";
-import multer from "multer";
+import { expressjwt } from "express-jwt";
+
+
+
+const auth = expressjwt({
+  secret: process.env["JWT_KEY"],
+  algorithms: ["HS256"],
+});
+
 
 // Initialisation de PrismaClient pour interagir avec la base de données
-const prisma = new PrismaClient();
 
 // Initialisation du routeur Express
 const router = express.Router();
+router.use(express.urlencoded({ extended: true }));
+const prisma = new PrismaClient();
 
 
-//multer permet gérer le téléchargement de la photo de l'utilisateur lors de l'enregistrement.
-
-const upload = multer({ dest: 'uploads/' }); // configuration multer
-
-router.post("/register", upload.single('photo'), async (req, res, next) => {
+// Définition de la route POST "/register"
+router.post("/register", async (req, res, next) => {
 
   // Route POST pour l'enregistrement des utilisateurs
   let data;
@@ -33,7 +41,7 @@ router.post("/register", upload.single('photo'), async (req, res, next) => {
 
 
   // Extraction des données validées
-  const { email, firstname, lastname, password } = data;
+  const { email, firstName, lastName, password, picture } = data;
 
   // Vérification de l'existence de l'utilisateur
   const existingUser = await prisma.user.findFirst({
@@ -57,9 +65,9 @@ router.post("/register", upload.single('photo'), async (req, res, next) => {
   const entry = await prisma.user.create({
     data: {
       email,
-      firstname,
-      lastname,
-      picture: req.file.path,
+      firstName,
+      lastName,
+      picture,
       password: hashedPassword,
     },
   });
@@ -68,8 +76,8 @@ router.post("/register", upload.single('photo'), async (req, res, next) => {
   res.status(201).json({
     id: entry.id,
     email: entry.email,
-    firstname: entry.firstName,
-    lastname: entry.lastName,
+    firstName: entry.firstName,
+    lastName: entry.lastName,
     picture: entry.picture,
   });
 });
@@ -135,10 +143,28 @@ router.post("/login", async (req, res, next) => {
   });
 });
 
+router.post('/snippet', auth, async (req, res) => {
+  // Extract snippet details from request body
+  const { content, language, categoryId } = req.body;
+  // Validate the data here...
 
+  // Save the snippet to the database
+  const snippet = await prisma.snippet.create({
+    data: {
+      content: content,
+      language: language,
+      categoryId: parseInt(categoryId),
+      userId: parseInt(categoryId),
+    },
+  });
+  console.log(snippet)
+
+  // Respond with the created snippet
+  res.status(201).json(snippet);
+});
 
 // Définition de la route GET "/snippets"
-router.get("/snippets", async (req, res, next) => {
+router.get("/snippet", auth, async (req, res, next) => {
   // Extraction de 'category' et 'page' des paramètres de requête
   const { category, page = 1 } = req.query;
 
@@ -147,7 +173,7 @@ router.get("/snippets", async (req, res, next) => {
 
   // Calcul du nombre de snippets à ignorer
   const skip = (page - 1) * pageSize;
-
+  console.log(skip)
   // Récupération des snippets de la base de données
   const snippets = await prisma.snippet.findMany({
     where: {
@@ -166,5 +192,132 @@ router.get("/snippets", async (req, res, next) => {
   res.json(snippets);
 });
 
+// // Route PUT pour mettre à jour une catégorie existante
+// router.put("/category/:id", async (req, res) => {
+//   // Extract category details from request body
+//   const { name } = req.body;
+
+//   // Extract category ID from route parameters
+//   const { id } = req.params;
+
+//   // Update the category in the database
+//   const category = await prisma.category.update({
+//     where: {
+//       id: parseInt(id),
+//     },
+//     data: {
+//       name: name,
+//     },
+//   });
+
+//   // Respond with the updated category
+//   res.json(category);
+// });
+
+
+
+// Route PUT pour mettre à jour un snippet existant pour modifier le contenu, le langage et la catégorie
+router.put("/snippet/:id", auth, async (req, res) => {
+  // Extract snippet details from request body
+  const { content, language, categoryId, } = req.body;
+
+  // Extract snippet ID from route parameters
+  const { id } = req.params;
+
+  // Update the snippet in the database
+  const snippet = await prisma.snippet.update({
+    where: {
+      id: parseInt(id),
+    },
+    data: {
+      content: content,
+      language: language,
+      categoryId: parseInt(categoryId),
+      userId: parseInt(categoryId),
+    },
+  });
+
+  // Respond with the updated snippet
+  res.json(snippet);
+});
+
+
+router.delete("/snippet/:id", auth, async (req, res) => {
+  // Extract snippet ID from route parameters
+  const { id } = req.params;
+
+  // Check if the snippet exists
+  const snippet = await prisma.snippet.findUnique({
+    where: {
+      id: parseInt(id),
+    },
+  });
+
+  if (!snippet) {
+    return res.status(404).json({ error: "Snippet not found" });
+  }
+
+  // Delete the snippet from the database
+  const deletedSnippet = await prisma.snippet.delete({
+    where: {
+      id: parseInt(id),
+    },
+  });
+
+  // Respond with the deleted snippet
+  res.json(deletedSnippet);
+});
+
+router.post("/category", async (req, res) => {
+  // Extract category name from request body
+  const { name } = req.body;
+
+  // Save the category to the database
+  const category = await prisma.category.create({
+    data: {
+      name: name,
+    },
+  });
+
+  // Respond with the created category
+  res.status(201).json(category);
+});
+
+
+// Route GET pour lister toutes les catégories
+router.get("/category", async (req, res) => {
+  // Fetch all categories from the database
+  const category = await prisma.category.findMany();
+
+  // Respond with the fetched categories
+  res.json(category);
+});
+
+
+// Route PUT pour modifier une catégorie existante
+router.put("/category/:id", auth, async (req, res) => {
+  const { name } = req.body;
+  const { id } = req.params;
+  const category = await prisma.category.update({
+    where: {
+      id: parseInt(id),
+    },
+    data: {
+      name: name,
+    },
+  });
+  res.json(category);
+});
+
+// Route DELETE pour supprimer une catégorie existante
+router.delete("/category/:id", auth, async (req, res) => {
+  const { id } = req.params;
+  const category = await prisma.category.delete({
+    where: {
+      id: parseInt(id),
+    },
+  });
+  res.json(category);
+});
 // Le routeur est exporté pour être utilisé dans d'autres fichiers.
 export default router;
