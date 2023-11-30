@@ -1,13 +1,19 @@
+// index.js
+
 import express from "express";
 import cors from 'cors';
 import 'dotenv/config';
 import fs from "fs";
 import v1Router from "./routes/v1.js";
-import https from 'https';
+// import https from 'https';
+import router from "./routes/v1.js";
 
 
 
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+const port = 3000;
 
 app.use(express.json());
 app.use(
@@ -30,19 +36,18 @@ app.use((err, req, res, next) => {
 
 
 
-const port = 3000;
 
 // use https
-const server = https.createServer(
-  {
-    key: fs.readFileSync("./localhost+1-key.pem"),
-    cert: fs.readFileSync("./localhost+1.pem"),
-  },
-  app
-);
+// const server = https.createServer(
+//   {
+//     key: fs.readFileSync("./localhost+1-key.pem"),
+//     cert: fs.readFileSync("./localhost+1.pem"),
+//   },
+//   app
+// );
 
 
 // server.listen instead of app.listen
-server.listen(port, () => {
+app.listen(port, () => {
   console.log(`App listening on port ${port}`);
 });
