@@ -5,7 +5,6 @@ import cors from 'cors';
 import 'dotenv/config';
 import fs from "fs";
 import v1Router from "./routes/v1.js";
-// import https from 'https';
 import router from "./routes/v1.js";
 
 
@@ -37,17 +36,7 @@ app.use((err, req, res, next) => {
 
 
 
-// use https
-// const server = https.createServer(
-//   {
-//     key: fs.readFileSync("./localhost+1-key.pem"),
-//     cert: fs.readFileSync("./localhost+1.pem"),
-//   },
-//   app
-// );
 
-
-// server.listen instead of app.listen
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);
 });
