@@ -18,7 +18,6 @@ const auth = expressjwt({
 });
 
 
-// Initialisation de PrismaClient pour interagir avec la base de données
 
 // Initialisation du routeur Express
 const router = express.Router();
@@ -167,6 +166,7 @@ router.post('/snippet', auth, async (req, res) => {
 router.get("/snippet", auth, async (req, res, next) => {
   // Extraction de 'category' et 'page' des paramètres de requête
   const { category, page = 1 } = req.query;
+  console.log(category)
 
   // Définition du nombre de snippets par page
   const pageSize = 10;
@@ -174,6 +174,14 @@ router.get("/snippet", auth, async (req, res, next) => {
   // Calcul du nombre de snippets à ignorer
   const skip = (page - 1) * pageSize;
   console.log(skip)
+
+
+  // Préparation de l'objet de condition
+  let condition = {};
+  if (category) {
+    condition.categoryId = parseInt(category);
+  }
+
   // Récupération des snippets de la base de données
   const snippets = await prisma.snippet.findMany({
     where: {
@@ -192,27 +200,6 @@ router.get("/snippet", auth, async (req, res, next) => {
   res.json(snippets);
 });
 
-// // Route PUT pour mettre à jour une catégorie existante
-// router.put("/category/:id", async (req, res) => {
-//   // Extract category details from request body
-//   const { name } = req.body;
-
-//   // Extract category ID from route parameters
-//   const { id } = req.params;
-
-//   // Update the category in the database
-//   const category = await prisma.category.update({
-//     where: {
-//       id: parseInt(id),
-//     },
-//     data: {
-//       name: name,
-//     },
-//   });
-
-//   // Respond with the updated category
-//   res.json(category);
-// });
 
 
 
